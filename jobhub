@@ -1,0 +1,102 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+
+# if [todo data] directory does not exist, make the directory
+appname = "jobhub"
+rootdir = "/usr/local/lib"
+datadir = "#{rootdir}/#{appname}/data"
+
+FileUtils::mkdir_p "#{datadir}"
+
+verb = ARGV[0]
+
+def get_duedate(arg):String
+  due_dates = arg.split(',')
+  due_date = due_dates[0]
+  year = ""
+  if due_dates.size == 1
+    time = Time.new
+    year = time.year
+  else
+    year = due_dates[1]
+  end
+  return "#{due_date}_#{year}"
+end
+
+
+case verb
+  when "add"
+    #mar4,2014
+    #mar4
+    content = ARGV[1]
+    data_location= "#{datadir}/#{get_duedate(ARGV[2])}"
+    file = File.open(data_location, "a")
+    time = Time.new
+    hash = "#{ARGV[2]}#{time.hour}#{time.min}#{time.sec}"
+    file.puts "#{content}|#{hash}"
+    file.close
+  when "listall"
+    Dir["#{datadir}/*"].each do |file|
+      duedate = file.split('/')[file.split('/').size-1]
+      File.open(file,"r").each do |line|
+        puts "#{duedate.gsub("_"," ")} | #{line}"
+      end
+    end
+  when "list"
+    if ARGV.size < 2
+      abort "arg size non sufficient"
+    end
+
+    File.open("#{datadir}/#{get_duedate(ARGV[1])}","r").each do |line|
+      puts line
+    end
+
+  when "rmdate"
+    if ARGV.size < 2
+      abort "arg size non sufficient"
+    end
+
+    for i in (1 .. ARGV.size-1) do
+      target_date = get_duedate(ARGV[i])
+      Dir["#{datadir}/*"].each do |file|
+        if file.end_with?(target_date)
+          FileUtils.rm(file)
+        end
+      end
+    end
+  when "rmtask"
+    if ARGV.size < 2
+      abort "arg size non sufficient"
+    end
+    hash = ARGV[1]
+
+    Dir["#{datadir}/*"].each do |file|
+      duedate = file.split('/')[file.split('/').size-1]
+      contents = Array.new
+      File.open(file,"r").each do |line|
+       if line.strip.end_with?("#{hash.strip}") == false
+         contents.push line
+       end
+      end
+      f = File.open(file,"w")
+      contents.each do |line|
+       f.puts line
+      end
+      f.close
+    end
+  when "help"
+    bar = "------------------------"
+    puts bar
+    puts "#{appname} [add] [content] [date]"
+    puts "#{appname} [list] [date]"
+    puts "#{appname} [listall]"
+    puts "#{appname} [rmdate] [date(ex.may17)]"
+    puts "#{appname} [rmtask] [date] [index]"
+    puts bar
+    puts
+  else
+    abort "#{appname} [verb]"
+end
+
+
